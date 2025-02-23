@@ -18,6 +18,7 @@ export const styles = StyleSheet.create({
   },
   submitBtn: {
     width: "50%",
+    marginVertical: 10,
     backgroundColor: "#000",
     justifyContent: "center",
     alignItems: "center",
@@ -74,4 +75,40 @@ export const styles = StyleSheet.create({
   doneTodo: {
     textDecorationLine: "line-through",
   },
+  todoItem: {
+    flexDirection: "row",  
+    alignItems: "center", 
+    justifyContent: "space-between",
+    backgroundColor: "#fff",
+    padding: 10,
+    marginVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+  
+  iconsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  
+  icon: {
+    marginLeft: 10, 
+  },
+  inProgressTodo: {
+    backgroundColor: "#fff7e6", 
+    borderColor: "orange",
+  },
+  todoTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  
+  todoDescription: {
+    fontSize: 14,
+    color: "#666", 
+    marginTop: 2,
+  },
+  
+  
 });

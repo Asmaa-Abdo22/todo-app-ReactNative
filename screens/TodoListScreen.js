@@ -1,33 +1,100 @@
-import React, { useState } from 'react';
-import { TextInput, TouchableOpacity, ScrollView, View, Text } from 'react-native'; 
-import { styles } from '../styles'; 
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  StyleSheet,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const TodoListScreen = ({ navigation }) => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+const TodoListScreen = () => {
   const [todos, setTodos] = useState([]);
-  const [filter, setFilter] = useState('All');
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [filter, setFilter] = useState("All");
+  const [editingId, setEditingId] = useState(null);
 
-  const handleSubmit = () => {
-    if (title && description) {
-      setTodos([...todos, { id: Date.now(), title, description, done: false }]);
-      setTitle('');
-      setDescription('');
+  useEffect(() => {
+    loadTodos();
+  }, []);
+
+  useEffect(() => {
+    saveTodos();
+  }, [todos]);
+
+  const saveTodos = async () => {
+    try {
+      await AsyncStorage.setItem("todos", JSON.stringify(todos));
+    } catch (error) {
+      console.error("Error saving todos", error);
     }
   };
 
-  const toggleDone = (id) => {
-    setTodos(todos.map(todo => todo.id === id ? { ...todo, done: !todo.done } : todo));
+  const loadTodos = async () => {
+    try {
+      const storedTodos = await AsyncStorage.getItem("todos");
+      if (storedTodos) setTodos(JSON.parse(storedTodos));
+    } catch (error) {
+      console.error("Error loading todos", error);
+    }
   };
 
-  const filteredTodos = todos.filter(todo => {
-    if (filter === 'Done') return todo.done;
-    if (filter === 'In progress') return !todo.done;
+  const addOrUpdateTodo = () => {
+    if (title.trim() === "" || description.trim() === "") return;
+
+    if (editingId) {
+      setTodos(
+        todos.map((todo) =>
+          todo.id === editingId ? { ...todo, title, description } : todo
+        )
+      );
+      setEditingId(null);
+    } else {
+      const newTodo = {
+        id: Date.now().toString(),
+        title,
+        description,
+        status: "pending",
+      };
+      setTodos([...todos, newTodo]);
+    }
+
+    setTitle("");
+    setDescription("");
+  };
+
+  const deleteTodo = (id) => {
+    setTodos(todos.filter((todo) => todo.id !== id));
+  };
+
+  const updateStatus = (id, newStatus) => {
+    setTodos(
+      todos.map((todo) =>
+        todo.id === id ? { ...todo, status: newStatus } : todo
+      )
+    );
+  };
+
+  const editTodo = (todo) => {
+    setTitle(todo.title);
+    setDescription(todo.description);
+    setEditingId(todo.id);
+  };
+
+  const filteredTodos = todos.filter((todo) => {
+    if (filter === "All") return true;
+    if (filter === "In Progress") return todo.status === "inProgress";
+    if (filter === "Done") return todo.status === "done";
     return true;
   });
 
   return (
     <View style={styles.container}>
+      <Text style={styles.header}>Todo List</Text>
+
       <TextInput
         style={styles.input}
         placeholder="Enter title"
@@ -40,45 +107,122 @@ const TodoListScreen = ({ navigation }) => {
         value={description}
         onChangeText={setDescription}
       />
-      <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-        <Text style={styles.text}>Submit</Text>
+      <TouchableOpacity style={styles.button} onPress={addOrUpdateTodo}>
+        <Text style={styles.buttonText}>{editingId ? "Update" : "Submit"}</Text>
       </TouchableOpacity>
 
-      <View style={styles.dividerLine} />
-
       <View style={styles.filterContainer}>
-        <TouchableOpacity
-          style={filter === 'All' ? styles.activeFilterBtn : styles.filterBtn}
-          onPress={() => setFilter('All')}
-        >
-          <Text style={filter === 'All' ? styles.activeFilterText : styles.filterText}>All</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={filter === 'In progress' ? styles.activeFilterBtn : styles.filterBtn}
-          onPress={() => setFilter('In progress')}
-        >
-          <Text style={filter === 'In progress' ? styles.activeFilterText : styles.filterText}>In progress</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={filter === 'Done' ? styles.activeFilterBtn : styles.filterBtn}
-          onPress={() => setFilter('Done')}
-        >
-          <Text style={filter === 'Done' ? styles.activeFilterText : styles.filterText}>Done</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView style={styles.todosContainer}>
-        {filteredTodos.map(todo => (
+        {["All", "In Progress", "Done"].map((status) => (
           <TouchableOpacity
-            key={todo.id}
-            onPress={() => navigation.navigate('TodoDetails', { todo })}
+            key={status}
+            style={[
+              styles.filterButton,
+              filter === status && styles.activeFilter,
+            ]}
+            onPress={() => setFilter(status)}
           >
-            <Text style={todo.done ? styles.doneTodo : null}>{todo.title}</Text>
+            <Text style={styles.filterText}>{status}</Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+      </View>
+
+      <FlatList
+        data={filteredTodos}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View
+            style={[
+              styles.todoItem,
+              item.status === "inProgress" && styles.inProgressTodo,
+            ]}
+          >
+            <View>
+              <Text style={styles.todoTitle}>{item.title}</Text>
+              <Text style={styles.todoDescription}>{item.description}</Text>
+            </View>
+
+            <View style={styles.iconsContainer}>
+              <TouchableOpacity onPress={() => editTodo(item)}>
+                <Ionicons
+                  name="create-outline"
+                  size={20}
+                  color="blue"
+                  style={styles.icon}
+                />
+              </TouchableOpacity>
+
+              {item.status === "pending" && (
+                <TouchableOpacity
+                  onPress={() => updateStatus(item.id, "inProgress")}
+                >
+                  <Ionicons
+                    name="time-outline"
+                    size={20}
+                    color="orange"
+                    style={styles.icon}
+                  />
+                </TouchableOpacity>
+              )}
+
+              {item.status !== "done" && (
+                <TouchableOpacity onPress={() => updateStatus(item.id, "done")}>
+                  <Ionicons
+                    name="checkmark-done-outline"
+                    size={20}
+                    color="green"
+                    style={styles.icon}
+                  />
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity onPress={() => deleteTodo(item.id)}>
+                <Ionicons
+                  name="trash"
+                  size={20}
+                  color="red"
+                  style={styles.icon}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      />
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: { padding: 20 },
+  header: { fontSize: 24, fontWeight: "bold", marginBottom: 10 },
+  input: { borderWidth: 1, padding: 10, marginBottom: 10, borderRadius: 5 },
+  button: {
+    backgroundColor: "green",
+    padding: 10,
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  buttonText: { color: "white", fontWeight: "bold" },
+  filterContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginVertical: 10,
+  },
+  filterButton: { padding: 10, borderWidth: 1, margin: 5, borderRadius: 5 },
+  activeFilter: { backgroundColor: "red" },
+  filterText: { color: "black" },
+  todoItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 10,
+    borderBottomWidth: 1,
+  },
+  inProgressTodo: {
+    backgroundColor: "#fff7e6",
+    borderColor: "orange",
+    borderWidth: 1,
+    borderRadius: 5,
+  },
+});
 
 export default TodoListScreen;
