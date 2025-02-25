@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,88 +6,43 @@ import {
   TouchableOpacity,
   FlatList,
   StyleSheet,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+} from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
+import { Ionicons } from '@expo/vector-icons';
+import { addTodo, deleteTodo, updateTodo, setFilter } from '../redux/todoSlice';
 
 const TodoListScreen = () => {
-  const [todos, setTodos] = useState([]);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [filter, setFilter] = useState("All");
+  const dispatch = useDispatch();
+  const todos = useSelector(state => state.todos.list);
+  const filter = useSelector(state => state.todos.filter);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [editingId, setEditingId] = useState(null);
 
-  useEffect(() => {
-    loadTodos();
-  }, []);
-
-  useEffect(() => {
-    saveTodos();
-  }, [todos]);
-
-  const saveTodos = async () => {
-    try {
-      await AsyncStorage.setItem("todos", JSON.stringify(todos));
-    } catch (error) {
-      console.error("Error saving todos", error);
-    }
-  };
-
-  const loadTodos = async () => {
-    try {
-      const storedTodos = await AsyncStorage.getItem("todos");
-      if (storedTodos) setTodos(JSON.parse(storedTodos));
-    } catch (error) {
-      console.error("Error loading todos", error);
-    }
-  };
-
   const addOrUpdateTodo = () => {
-    if (title.trim() === "" || description.trim() === "") return;
+    if (!title.trim() || !description.trim()) return;
 
     if (editingId) {
-      setTodos(
-        todos.map((todo) =>
-          todo.id === editingId ? { ...todo, title, description } : todo
-        )
-      );
+      dispatch(updateTodo({ id: editingId, title, description }));
       setEditingId(null);
     } else {
       const newTodo = {
         id: Date.now().toString(),
         title,
         description,
-        status: "pending",
+        status: 'pending',
       };
-      setTodos([...todos, newTodo]);
+      dispatch(addTodo(newTodo));
     }
 
-    setTitle("");
-    setDescription("");
+    setTitle('');
+    setDescription('');
   };
 
-  const deleteTodo = (id) => {
-    setTodos(todos.filter((todo) => todo.id !== id));
-  };
-
-  const updateStatus = (id, newStatus) => {
-    setTodos(
-      todos.map((todo) =>
-        todo.id === id ? { ...todo, status: newStatus } : todo
-      )
-    );
-  };
-
-  const editTodo = (todo) => {
-    setTitle(todo.title);
-    setDescription(todo.description);
-    setEditingId(todo.id);
-  };
-
-  const filteredTodos = todos.filter((todo) => {
-    if (filter === "All") return true;
-    if (filter === "In Progress") return todo.status === "inProgress";
-    if (filter === "Done") return todo.status === "done";
+  const filteredTodos = todos.filter(todo => {
+    if (filter === 'All') return true;
+    if (filter === 'In Progress') return todo.status === 'inProgress';
+    if (filter === 'Done') return todo.status === 'done';
     return true;
   });
 
@@ -119,7 +74,7 @@ const TodoListScreen = () => {
               styles.filterButton,
               filter === status && styles.activeFilter,
             ]}
-            onPress={() => setFilter(status)}
+            onPress={() => dispatch(setFilter(status))}
           >
             <Text style={styles.filterText}>{status}</Text>
           </TouchableOpacity>
@@ -142,7 +97,12 @@ const TodoListScreen = () => {
             </View>
 
             <View style={styles.iconsContainer}>
-              <TouchableOpacity onPress={() => editTodo(item)}>
+        
+              <TouchableOpacity onPress={() => {
+                setTitle(item.title);
+                setDescription(item.description);
+                setEditingId(item.id);
+              }}>
                 <Ionicons
                   name="create-outline"
                   size={20}
@@ -151,9 +111,10 @@ const TodoListScreen = () => {
                 />
               </TouchableOpacity>
 
+  
               {item.status === "pending" && (
                 <TouchableOpacity
-                  onPress={() => updateStatus(item.id, "inProgress")}
+                  onPress={() => dispatch(updateTodo({ id: item.id, status: "inProgress" }))}
                 >
                   <Ionicons
                     name="time-outline"
@@ -164,8 +125,11 @@ const TodoListScreen = () => {
                 </TouchableOpacity>
               )}
 
+      
               {item.status !== "done" && (
-                <TouchableOpacity onPress={() => updateStatus(item.id, "done")}>
+                <TouchableOpacity
+                  onPress={() => dispatch(updateTodo({ id: item.id, status: "done" }))}
+                >
                   <Ionicons
                     name="checkmark-done-outline"
                     size={20}
@@ -175,7 +139,8 @@ const TodoListScreen = () => {
                 </TouchableOpacity>
               )}
 
-              <TouchableOpacity onPress={() => deleteTodo(item.id)}>
+          
+              <TouchableOpacity onPress={() => dispatch(deleteTodo(item.id))}>
                 <Ionicons
                   name="trash"
                   size={20}
