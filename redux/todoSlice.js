@@ -1,9 +1,22 @@
 import { createSlice } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+const loadTodos = async () => {
+  try {
+    const storedTodos = await AsyncStorage.getItem('todos');
+    return storedTodos ? JSON.parse(storedTodos) : [];
+  } catch (error) {
+    console.error('Failed to load todos:', error);
+    return [];
+  }
+};
+
 const todoSlice = createSlice({
   name: 'todos',
-  initialState: { list: [], filter: 'All' },
+  initialState: {
+    list: [],
+    filter: 'All',
+  },
   reducers: {
     setTodos: (state, action) => {
       state.list = action.payload;

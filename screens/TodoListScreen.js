@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,15 +9,31 @@ import {
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
-import { addTodo, deleteTodo, updateTodo, setFilter } from '../redux/todoSlice';
+import {
+  addTodo,
+  deleteTodo,
+  updateTodo,
+  setFilter,
+} from '../redux/todoSlice';
 
 const TodoListScreen = () => {
   const dispatch = useDispatch();
   const todos = useSelector(state => state.todos.list);
   const filter = useSelector(state => state.todos.filter);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [editingId, setEditingId] = useState(null);
+  const [title, setTitle] = React.useState('');
+  const [description, setDescription] = React.useState('');
+  const [editingId, setEditingId] = React.useState(null);
+
+  // Pre-fill fields when editing
+  useEffect(() => {
+    if (editingId) {
+      const todoToEdit = todos.find(todo => todo.id === editingId);
+      if (todoToEdit) {
+        setTitle(todoToEdit.title);
+        setDescription(todoToEdit.description);
+      }
+    }
+  }, [editingId, todos]);
 
   const addOrUpdateTodo = () => {
     if (!title.trim() || !description.trim()) return;
@@ -63,11 +79,11 @@ const TodoListScreen = () => {
         onChangeText={setDescription}
       />
       <TouchableOpacity style={styles.button} onPress={addOrUpdateTodo}>
-        <Text style={styles.buttonText}>{editingId ? "Update" : "Submit"}</Text>
+        <Text style={styles.buttonText}>{editingId ? 'Update' : 'Submit'}</Text>
       </TouchableOpacity>
 
       <View style={styles.filterContainer}>
-        {["All", "In Progress", "Done"].map((status) => (
+        {['All', 'In Progress', 'Done'].map(status => (
           <TouchableOpacity
             key={status}
             style={[
@@ -83,70 +99,19 @@ const TodoListScreen = () => {
 
       <FlatList
         data={filteredTodos}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         renderItem={({ item }) => (
-          <View
-            style={[
-              styles.todoItem,
-              item.status === "inProgress" && styles.inProgressTodo,
-            ]}
-          >
+          <View style={styles.todoItem}>
             <View>
               <Text style={styles.todoTitle}>{item.title}</Text>
               <Text style={styles.todoDescription}>{item.description}</Text>
             </View>
-
             <View style={styles.iconsContainer}>
-        
-              <TouchableOpacity onPress={() => {
-                setTitle(item.title);
-                setDescription(item.description);
-                setEditingId(item.id);
-              }}>
-                <Ionicons
-                  name="create-outline"
-                  size={20}
-                  color="blue"
-                  style={styles.icon}
-                />
+              <TouchableOpacity onPress={() => setEditingId(item.id)}>
+                <Ionicons name="create-outline" size={20} color="blue" />
               </TouchableOpacity>
-
-  
-              {item.status === "pending" && (
-                <TouchableOpacity
-                  onPress={() => dispatch(updateTodo({ id: item.id, status: "inProgress" }))}
-                >
-                  <Ionicons
-                    name="time-outline"
-                    size={20}
-                    color="orange"
-                    style={styles.icon}
-                  />
-                </TouchableOpacity>
-              )}
-
-      
-              {item.status !== "done" && (
-                <TouchableOpacity
-                  onPress={() => dispatch(updateTodo({ id: item.id, status: "done" }))}
-                >
-                  <Ionicons
-                    name="checkmark-done-outline"
-                    size={20}
-                    color="green"
-                    style={styles.icon}
-                  />
-                </TouchableOpacity>
-              )}
-
-          
               <TouchableOpacity onPress={() => dispatch(deleteTodo(item.id))}>
-                <Ionicons
-                  name="trash"
-                  size={20}
-                  color="red"
-                  style={styles.icon}
-                />
+                <Ionicons name="trash" size={20} color="red" />
               </TouchableOpacity>
             </View>
           </View>
@@ -158,36 +123,19 @@ const TodoListScreen = () => {
 
 const styles = StyleSheet.create({
   container: { padding: 20 },
-  header: { fontSize: 24, fontWeight: "bold", marginBottom: 10 },
+  header: { fontSize: 24, fontWeight: 'bold', marginBottom: 10 },
   input: { borderWidth: 1, padding: 10, marginBottom: 10, borderRadius: 5 },
   button: {
-    backgroundColor: "green",
+    backgroundColor: 'green',
     padding: 10,
     borderRadius: 5,
-    alignItems: "center",
+    alignItems: 'center',
   },
-  buttonText: { color: "white", fontWeight: "bold" },
-  filterContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginVertical: 10,
-  },
+  buttonText: { color: 'white', fontWeight: 'bold' },
+  filterContainer: { flexDirection: 'row', justifyContent: 'center', marginVertical: 10 },
   filterButton: { padding: 10, borderWidth: 1, margin: 5, borderRadius: 5 },
-  activeFilter: { backgroundColor: "red" },
-  filterText: { color: "black" },
-  todoItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 10,
-    borderBottomWidth: 1,
-  },
-  inProgressTodo: {
-    backgroundColor: "#fff7e6",
-    borderColor: "orange",
-    borderWidth: 1,
-    borderRadius: 5,
-  },
+  activeFilter: { backgroundColor: 'red' },
+  todoItem: { flexDirection: 'row', justifyContent: 'space-between', padding: 10, borderBottomWidth: 1 },
 });
 
 export default TodoListScreen;
